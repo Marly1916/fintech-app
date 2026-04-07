@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<button class="toggle-btn" onclick="toggleDark()" id="themeBtn">🌙</button>
+
+<div class="container">
+
+<h2>Dashboard</h2>
+
+<div class="card">
+<h3>Balance</h3>
+<h1>{{ balance }}</h1>
+<p class="green">+ {{ income }}</p>
+<p class="red">{{ expenses }}</p>
+</div>
+
+<div class="card">
+<h3>Add Transaction</h3>
+<form action="/add" method="POST">
+<input name="description" placeholder="Description" required>
+<input name="amount" type="number" required>
+<select name="category" required>
+<option>Food</option>
+<option>Transport</option>
+<option>Rent</option>
+<option>Salary</option>
+<option>Other</option>
+</select>
+<button>Add</button>
+</form>
+</div>
+
+</div>
+
+<div class="nav">
+<a href="/"><i class="fas fa-home"></i><span>Home</span></a>
+<a href="/transactions"><i class="fas fa-exchange-alt"></i><span>Transactions</span></a>
+<a href="/analytics"><i class="fas fa-chart-pie"></i><span>Analytics</span></a>
+<a href="/profile"><i class="fas fa-user"></i><span>Profile</span></a>
+</div>
+
+<script>
+function toggleDark() {
+    document.body.classList.toggle("dark");
+
+    let isDark = document.body.classList.contains("dark");
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+
+    document.getElementById("themeBtn").innerText = isDark ? "☀️" : "🌙";
+}
+
+if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark");
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("themeBtn").innerText = "☀️";
+    });
+}
+</script>
+
+</body>
+</html>
