@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Profile</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+<h2>Profile</h2>
+
+<div class="card">
+<p>User ID: {{ session["user_id"] }}</p>
+<a href="/logout">Logout</a>
+</div>
+
+</div>
+
+</body>
+</html>
