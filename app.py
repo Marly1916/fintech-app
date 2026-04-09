@@ -4,6 +4,7 @@ import bcrypt
 import re
 from collections import defaultdict
 from datetime import datetime
+import os
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -82,7 +83,7 @@ def home():
         balance=balance
     )
 
-# 💳 Transactions
+# 💳 Transactions page
 @app.route('/transactions')
 def transactions_page():
     if "user_id" not in session:
@@ -97,7 +98,15 @@ def transactions_page():
 
     return render_template('transactions.html', transactions=transactions)
 
-# 📊 REAL ANALYTICS
+# 👤 PROFILE PAGE (FIXED 🔥)
+@app.route('/profile')
+def profile():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    return render_template('profile.html')
+
+# 📊 Analytics
 @app.route('/analytics')
 def analytics():
     if "user_id" not in session:
@@ -110,11 +119,10 @@ def analytics():
     ).fetchall()
     conn.close()
 
-    # 💰 totals
     income = sum(t["amount"] for t in transactions if t["amount"] > 0)
     expenses = abs(sum(t["amount"] for t in transactions if t["amount"] < 0))
 
-    # 📊 category totals
+    # category totals
     category_totals = {}
     for t in transactions:
         category = t["category"]
@@ -124,13 +132,8 @@ def analytics():
     labels = list(category_totals.keys())
     values = list(category_totals.values())
 
-    # 🥇 top categories
-    sorted_categories = sorted(category_totals.items(), key=lambda x: x[1], reverse=True)
-    top_categories = sorted_categories[:3]
-
-    # 📅 REAL monthly data
+    # monthly data
     monthly_data = defaultdict(float)
-
     for t in transactions:
         if t["date"]:
             dt = datetime.strptime(t["date"], "%Y-%m-%d")
@@ -140,35 +143,13 @@ def analytics():
 
         monthly_data[month] += abs(t["amount"])
 
-    # sort months
-    def sort_key(m):
-        if m == "Unknown":
-            return datetime.min
-        return datetime.strptime(m, "%b %Y")
-
-    sorted_months = sorted(monthly_data.keys(), key=sort_key)
+    sorted_months = sorted(
+        monthly_data.keys(),
+        key=lambda m: datetime.strptime(m, "%b %Y") if m != "Unknown" else datetime.min
+    )
 
     month_labels = sorted_months
     month_values = [monthly_data[m] for m in sorted_months]
-
-    # 💡 insights
-    insights = []
-
-    if sorted_categories:
-        top = sorted_categories[0]
-        insights.append(f"You spend the most on {top[0]}.")
-
-        if expenses > 0 and top[1] > expenses * 0.5:
-            insights.append(f"{top[0]} takes over 50% of your spending.")
-
-    if income > 0:
-        savings = income - expenses
-        rate = (savings / income) * 100
-
-        if rate < 20:
-            insights.append("Your savings rate is low. Try to save at least 20%.")
-        else:
-            insights.append("Great! Your savings rate is healthy.")
 
     return render_template(
         'analytics.html',
@@ -176,13 +157,11 @@ def analytics():
         expenses=expenses,
         labels=labels,
         values=values,
-        top_categories=top_categories,
-        insights=insights,
         month_labels=month_labels,
         month_values=month_values
     )
 
-# ➕ Add transaction (WITH DATE)
+# ➕ Add transaction
 @app.route('/add', methods=['POST'])
 def add_transaction():
     if "user_id" not in session:
@@ -258,7 +237,7 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# ▶️ Run
+# ▶️ Run (Railway compatible)
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
