@@ -38,7 +38,6 @@ def init_db():
         )
     ''')
 
-    # Ensure date column exists
     try:
         conn.execute("ALTER TABLE transactions ADD COLUMN date TEXT")
     except:
@@ -83,7 +82,7 @@ def home():
         balance=balance
     )
 
-# 💳 Transactions page
+# 💳 Transactions
 @app.route('/transactions')
 def transactions_page():
     if "user_id" not in session:
@@ -98,13 +97,44 @@ def transactions_page():
 
     return render_template('transactions.html', transactions=transactions)
 
-# 👤 PROFILE PAGE (FIXED 🔥)
-@app.route('/profile')
+# 👤 PROFILE (UPDATED FEATURE 🔥)
+@app.route('/profile', methods=['GET', 'POST'])
 def profile():
     if "user_id" not in session:
         return redirect(url_for("login"))
 
-    return render_template('profile.html')
+    conn = get_db_connection()
+
+    if request.method == 'POST':
+        new_username = request.form.get("username")
+        new_password = request.form.get("password")
+
+        if new_username:
+            conn.execute(
+                "UPDATE users SET username = ? WHERE id = ?",
+                (new_username, session["user_id"])
+            )
+
+        if new_password:
+            if is_strong_password(new_password):
+                hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+                conn.execute(
+                    "UPDATE users SET password = ? WHERE id = ?",
+                    (hashed, session["user_id"])
+                )
+            else:
+                return "Password not strong enough!"
+
+        conn.commit()
+
+    user = conn.execute(
+        "SELECT * FROM users WHERE id = ?",
+        (session["user_id"],)
+    ).fetchone()
+
+    conn.close()
+
+    return render_template("profile.html", user=user)
 
 # 📊 Analytics
 @app.route('/analytics')
@@ -122,7 +152,6 @@ def analytics():
     income = sum(t["amount"] for t in transactions if t["amount"] > 0)
     expenses = abs(sum(t["amount"] for t in transactions if t["amount"] < 0))
 
-    # category totals
     category_totals = {}
     for t in transactions:
         category = t["category"]
@@ -132,7 +161,6 @@ def analytics():
     labels = list(category_totals.keys())
     values = list(category_totals.values())
 
-    # monthly data
     monthly_data = defaultdict(float)
     for t in transactions:
         if t["date"]:
@@ -237,7 +265,7 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# ▶️ Run (Railway compatible)
+# ▶️ Run (Railway ready)
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
