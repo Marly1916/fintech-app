@@ -89,6 +89,7 @@ body.dark .nav a {
     font-size: 18px;
 }
 
+
 /* 🌙 Floating Dark Mode Button */
 .toggle-btn {
     position: fixed;
@@ -125,4 +126,20 @@ body.dark .nav a {
 /* Headings */
 .card h3 {
     margin-bottom: 10px;
+}
+.cards {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.card.income { background: #d4edda; }
+.card.expense { background: #f8d7da; }
+.card.balance { background: #d1ecf1; }
+
+.transaction {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #ccc;
 }
