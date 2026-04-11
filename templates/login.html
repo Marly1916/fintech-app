@@ -1,29 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Login</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<title>Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
 <div class="container">
+<h2>Login</h2>
 
-    <div class="card" style="max-width: 400px; margin: 100px auto; text-align: center;">
-        <h2>Login</h2>
+<form method="POST">
+<input name="username" placeholder="Username or Email" required>
+<input name="password" type="password" placeholder="Password" required>
+<button>Login</button>
+</form>
 
-        <form method="POST">
-            <input type="text" name="username" placeholder="Username" required>
+<p>
+<a href="/forgot">Forgot Password?</a>
+</p>
 
-            <input type="password" name="password" placeholder="Password" required>
-
-            <button type="submit">Login</button>
-        </form>
-
-        <p style="margin-top: 15px;">
-            Don’t have an account?
-            <a href="/signup">Sign up</a>
-        </p>
-    </div>
+<p>
+Don't have an account? <a href="/signup">Sign up</a>
+</p>
 
 </div>
 
