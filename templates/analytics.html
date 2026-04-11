@@ -6,48 +6,44 @@
 
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
 <button class="toggle-btn" onclick="toggleDark()" id="themeBtn">🌙</button>
 
 <div class="container">
-
 <h2>Analytics</h2>
 
+<!-- SUMMARY -->
+<div class="cards">
+    <div class="card income">
+        <h3>Income</h3>
+        <p>{{ income }}</p>
+    </div>
+
+    <div class="card expense">
+        <h3>Expenses</h3>
+        <p>{{ expenses }}</p>
+    </div>
+</div>
+
+<!-- PIE CHART -->
 <div class="card">
-<h3>Monthly Spending</h3>
-<canvas id="lineChart"></canvas>
+    <h3>Spending by Category</h3>
+    <canvas id="pieChart"></canvas>
 </div>
 
+<!-- LINE CHART -->
 <div class="card">
-<h3>Income vs Expenses</h3>
-<canvas id="barChart"></canvas>
-</div>
-
-<div class="card">
-<h3>Spending by Category</h3>
-<div class="chart-container">
-<canvas id="pieChart"></canvas>
-</div>
-</div>
-
-<div class="card">
-<h3>Top Spending</h3>
-{% for c in top_categories %}
-<p>🥇 {{ c[0] }} — {{ c[1] }}</p>
-{% endfor %}
-</div>
-
-<div class="card">
-<h3>Insights</h3>
-{% for insight in insights %}
-<p>{{ insight }}</p>
-{% endfor %}
+    <h3>Monthly Spending</h3>
+    <canvas id="lineChart"></canvas>
 </div>
 
 </div>
 
+<!-- NAV -->
 <div class="nav">
 <a href="/"><i class="fas fa-home"></i><span>Home</span></a>
 <a href="/transactions"><i class="fas fa-exchange-alt"></i><span>Transactions</span></a>
@@ -55,22 +51,80 @@
 <a href="/profile"><i class="fas fa-user"></i><span>Profile</span></a>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
-new Chart(document.getElementById("lineChart"), {
-type: "line",
-data: { labels: {{ month_labels|tojson }}, datasets: [{ data: {{ month_values|tojson }}, tension: 0.3 }] }
+// 🌙 DARK MODE
+function toggleDark() {
+    document.body.classList.toggle("dark");
+
+    let isDark = document.body.classList.contains("dark");
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+
+    document.getElementById("themeBtn").innerText = isDark ? "☀️" : "🌙";
+}
+
+// APPLY SAVED THEME
+if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (localStorage.getItem("theme") === "dark") {
+        document.getElementById("themeBtn").innerText = "☀️";
+    }
 });
 
-new Chart(document.getElementById("barChart"), {
-type: "bar",
-data: { labels: ["Income","Expenses"], datasets: [{ data: [{{ income }},{{ expenses }}] }] }
-});
+// 📊 CHARTS
+const isDark = document.body.classList.contains("dark");
 
+// PIE CHART
 new Chart(document.getElementById("pieChart"), {
-type: "pie",
-data: { labels: {{ labels|tojson }}, datasets: [{ data: {{ values|tojson }}] }
+    type: "pie",
+    data: {
+        labels: {{ labels|tojson }},
+        datasets: [{
+            data: {{ values|tojson }}
+        }]
+    },
+    options: {
+        plugins: {
+            legend: {
+                labels: {
+                    color: isDark ? "white" : "black"
+                }
+            }
+        }
+    }
+});
+
+// LINE CHART
+new Chart(document.getElementById("lineChart"), {
+    type: "line",
+    data: {
+        labels: {{ month_labels|tojson }},
+        datasets: [{
+            label: "Spending",
+            data: {{ month_values|tojson }},
+            fill: false,
+            tension: 0.3
+        }]
+    },
+    options: {
+        scales: {
+            x: {
+                ticks: { color: isDark ? "white" : "black" }
+            },
+            y: {
+                ticks: { color: isDark ? "white" : "black" }
+            }
+        },
+        plugins: {
+            legend: {
+                labels: {
+                    color: isDark ? "white" : "black"
+                }
+            }
+        }
+    }
 });
 </script>
 
