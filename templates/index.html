@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<button class="toggle-btn" onclick="toggleDark()" id="themeBtn">🌙</button>
+
+<div class="container">
+
+<h2>Dashboard</h2>
+
+<!-- 💰 SUMMARY CARDS -->
+<div class="cards">
+    <div class="card income">
+        <h3>Income</h3>
+        <p>{{ income }}</p>
+    </div>
+
+    <div class="card expense">
+        <h3>Expenses</h3>
+        <p>{{ expenses }}</p>
+    </div>
+
+    <div class="card balance">
+        <h3>Balance</h3>
+        <p>{{ balance }}</p>
+    </div>
+</div>
+
+<!-- 📊 MINI CHART -->
+<div class="card">
+    <h3>Spending Overview</h3>
+    <canvas id="miniChart"></canvas>
+</div>
+
+<!-- ⚡ RECENT TRANSACTIONS -->
+<div class="card">
+<h3>Recent Transactions</h3>
+
+{% for t in transactions[:5] %}
+<div class="transaction">
+    <span>{{ t["description"] }}</span>
+    <span>{{ t["amount"] }}</span>
+</div>
+{% endfor %}
+
+</div>
+
+</div>
+
+<!-- 📱 NAV -->
+<div class="nav">
+<a href="/"><i class="fas fa-home"></i><span>Home</span></a>
+<a href="/transactions"><i class="fas fa-exchange-alt"></i><span>Transactions</span></a>
+<a href="/analytics"><i class="fas fa-chart-pie"></i><span>Analytics</span></a>
+<a href="/profile"><i class="fas fa-user"></i><span>Profile</span></a>
+</div>
+
+<script>
+// 🌙 Dark mode
+function toggleDark() {
+    document.body.classList.toggle("dark");
+
+    let isDark = document.body.classList.contains("dark");
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+
+    document.getElementById("themeBtn").innerText = isDark ? "☀️" : "🌙";
+}
+
+if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark");
+}
+
+// 📊 Mini chart
+const ctx = document.getElementById('miniChart');
+
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Income', 'Expenses'],
+        datasets: [{
+            data: [{{ income }}, {{ expenses|abs }}]
+        }]
+    }
+});
+</script>
+
+</body>
+</html>
