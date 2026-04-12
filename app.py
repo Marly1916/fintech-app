@@ -86,7 +86,98 @@ def home():
                            expenses=expenses,
                            balance=balance)
 
-# 👤 PROFILE
+# 💳 Transactions
+@app.route('/transactions')
+def transactions_page():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+    transactions = conn.execute(
+        'SELECT * FROM transactions WHERE user_id=?',
+        (session["user_id"],)
+    ).fetchall()
+    conn.close()
+
+    return render_template('transactions.html', transactions=transactions)
+
+# 📊 Analytics
+@app.route('/analytics')
+def analytics():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+    transactions = conn.execute(
+        'SELECT * FROM transactions WHERE user_id=?',
+        (session["user_id"],)
+    ).fetchall()
+    conn.close()
+
+    income = sum(t["amount"] for t in transactions if t["amount"] > 0)
+    expenses = abs(sum(t["amount"] for t in transactions if t["amount"] < 0))
+
+    # Category totals
+    category_totals = {}
+    for t in transactions:
+        category = t["category"]
+        amount = abs(t["amount"])
+        category_totals[category] = category_totals.get(category, 0) + amount
+
+    labels = list(category_totals.keys())
+    values = list(category_totals.values())
+
+    # Monthly data
+    monthly_data = defaultdict(float)
+    for t in transactions:
+        if t["date"]:
+            dt = datetime.strptime(t["date"], "%Y-%m-%d")
+            month = dt.strftime("%b %Y")
+        else:
+            month = "Unknown"
+
+        monthly_data[month] += abs(t["amount"])
+
+    sorted_months = sorted(
+        monthly_data.keys(),
+        key=lambda m: datetime.strptime(m, "%b %Y") if m != "Unknown" else datetime.min
+    )
+
+    month_labels = sorted_months
+    month_values = [monthly_data[m] for m in sorted_months]
+
+    return render_template(
+        'analytics.html',
+        income=income,
+        expenses=expenses,
+        labels=labels,
+        values=values,
+        month_labels=month_labels,
+        month_values=month_values
+    )
+
+# ➕ Add Transaction
+@app.route('/add', methods=['POST'])
+def add_transaction():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    description = request.form.get('description')
+    amount = float(request.form.get('amount'))
+    category = request.form.get('category')
+    date = datetime.now().strftime("%Y-%m-%d")
+
+    conn = get_db_connection()
+    conn.execute(
+        'INSERT INTO transactions (user_id, description, amount, category, date) VALUES (?, ?, ?, ?, ?)',
+        (session["user_id"], description, amount, category, date)
+    )
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('home'))
+
+# 👤 Profile
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
     if "user_id" not in session:
@@ -123,7 +214,7 @@ def profile():
 
     return render_template("profile.html", user=user)
 
-# 🔐 SIGNUP
+# 🔐 Signup
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -151,7 +242,7 @@ def signup():
 
     return render_template('signup.html')
 
-# 🔐 LOGIN (username OR email)
+# 🔐 Login
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -173,7 +264,7 @@ def login():
 
     return render_template('login.html')
 
-# 🔁 FORGOT PASSWORD (NEW 🔥)
+# 🔁 Forgot Password
 @app.route('/forgot', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
@@ -206,13 +297,13 @@ def forgot_password():
 
     return render_template('forgot.html')
 
-# 🚪 LOGOUT
+# 🚪 Logout
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# ▶️ RUN
+# ▶️ Run
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
