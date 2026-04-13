@@ -76,3 +76,16 @@ body.dark select {
     border-radius: 50%;
     cursor: pointer;
 }
+form input, form select, form button {
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+form button {
+    background: black;
+    color: white;
+    border: none;
+}
