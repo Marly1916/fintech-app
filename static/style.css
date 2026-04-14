@@ -89,3 +89,8 @@ form button {
     color: white;
     border: none;
 }
+.chart-container {
+    width: 250px;
+    height: 250px;
+    margin: auto;
+}
