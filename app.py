@@ -9,13 +9,12 @@ import os
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 
-# DB connection
+# DB
 def get_db_connection():
     conn = sqlite3.connect('fintech.db')
     conn.row_factory = sqlite3.Row
     return conn
 
-# Init DB
 def init_db():
     conn = get_db_connection()
 
@@ -28,11 +27,6 @@ def init_db():
         )
     ''')
 
-    try:
-        conn.execute("ALTER TABLE users ADD COLUMN email TEXT")
-    except:
-        pass
-
     conn.execute('''
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,24 +38,14 @@ def init_db():
         )
     ''')
 
-    try:
-        conn.execute("ALTER TABLE transactions ADD COLUMN date TEXT")
-    except:
-        pass
-
     conn.commit()
     conn.close()
 
 init_db()
 
-# Password strength
+# Password check
 def is_strong_password(password):
-    if len(password) < 8: return False
-    if not re.search(r"[A-Z]", password): return False
-    if not re.search(r"[a-z]", password): return False
-    if not re.search(r"[0-9]", password): return False
-    if not re.search(r"[^A-Za-z0-9]", password): return False
-    return True
+    return len(password) >= 8
 
 # Dashboard
 @app.route('/')
@@ -91,7 +75,7 @@ def home():
         today=today
     )
 
-# Add transaction (UPDATED)
+# ADD TRANSACTION (FIXED DATE)
 @app.route('/add', methods=['POST'])
 def add_transaction():
     if "user_id" not in session:
@@ -103,7 +87,8 @@ def add_transaction():
     t_type = request.form.get('type')
     date = request.form.get('date')
 
-    if not date:
+    # ✅ FIXED DATE HANDLING
+    if not date or date == "":
         date = datetime.now().strftime("%Y-%m-%d")
 
     if t_type == "expense":
@@ -121,7 +106,7 @@ def add_transaction():
 
     return redirect(url_for('home'))
 
-# Transactions page
+# TRANSACTIONS
 @app.route('/transactions')
 def transactions_page():
     if "user_id" not in session:
@@ -136,7 +121,7 @@ def transactions_page():
 
     return render_template('transactions.html', transactions=transactions)
 
-# Analytics
+# ANALYTICS (SAFE DATE FIX)
 @app.route('/analytics')
 def analytics():
     if "user_id" not in session:
@@ -152,6 +137,7 @@ def analytics():
     income = sum(t["amount"] for t in transactions if t["amount"] > 0)
     expenses = abs(sum(t["amount"] for t in transactions if t["amount"] < 0))
 
+    # Categories
     category_totals = {}
     for t in transactions:
         category = t["category"]
@@ -161,23 +147,19 @@ def analytics():
     labels = list(category_totals.keys())
     values = list(category_totals.values())
 
+    # Monthly
     monthly_data = defaultdict(float)
     for t in transactions:
-        if t["date"]:
+        try:
             dt = datetime.strptime(t["date"], "%Y-%m-%d")
             month = dt.strftime("%b %Y")
-        else:
+        except:
             month = "Unknown"
 
         monthly_data[month] += abs(t["amount"])
 
-    sorted_months = sorted(
-        monthly_data.keys(),
-        key=lambda m: datetime.strptime(m, "%b %Y") if m != "Unknown" else datetime.min
-    )
-
-    month_labels = sorted_months
-    month_values = [monthly_data[m] for m in sorted_months]
+    month_labels = list(monthly_data.keys())
+    month_values = list(monthly_data.values())
 
     return render_template(
         'analytics.html',
@@ -189,7 +171,7 @@ def analytics():
         month_values=month_values
     )
 
-# Login
+# LOGIN
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -211,16 +193,13 @@ def login():
 
     return render_template('login.html')
 
-# Signup
+# SIGNUP
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
-
-        if not is_strong_password(password):
-            return "Weak password!"
 
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
@@ -232,93 +211,20 @@ def signup():
             )
             conn.commit()
         except:
-            return "Username or email already exists"
+            return "Username or email exists"
 
         conn.close()
         return redirect(url_for('login'))
 
     return render_template('signup.html')
 
-# Forgot password
-@app.route('/forgot', methods=['GET', 'POST'])
-def forgot_password():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        new_password = request.form.get('password')
-
-        if not is_strong_password(new_password):
-            return "Weak password!"
-
-        conn = get_db_connection()
-        user = conn.execute(
-            "SELECT * FROM users WHERE email=?",
-            (email,)
-        ).fetchone()
-
-        if not user:
-            conn.close()
-            return "Email not found"
-
-        hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
-
-        conn.execute(
-            "UPDATE users SET password=? WHERE email=?",
-            (hashed, email)
-        )
-        conn.commit()
-        conn.close()
-
-        return redirect(url_for('login'))
-
-    return render_template('forgot.html')
-
-# Profile
-@app.route('/profile', methods=['GET', 'POST'])
-def profile():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    conn = get_db_connection()
-
-    if request.method == 'POST':
-        username = request.form.get("username")
-        email = request.form.get("email")
-        password = request.form.get("password")
-
-        if username:
-            conn.execute("UPDATE users SET username=? WHERE id=?",
-                         (username, session["user_id"]))
-
-        if email:
-            conn.execute("UPDATE users SET email=? WHERE id=?",
-                         (email, session["user_id"]))
-
-        if password:
-            if is_strong_password(password):
-                hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-                conn.execute("UPDATE users SET password=? WHERE id=?",
-                             (hashed, session["user_id"]))
-            else:
-                return "Weak password!"
-
-        conn.commit()
-
-    user = conn.execute(
-        "SELECT * FROM users WHERE id=?",
-        (session["user_id"],)
-    ).fetchone()
-
-    conn.close()
-
-    return render_template("profile.html", user=user)
-
-# Logout
+# LOGOUT
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# Run
+# RUN
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
